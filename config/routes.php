@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Routes configuration
  *
@@ -17,6 +18,7 @@
  * @link          https://cakephp.org CakePHP(tm) Project
  * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
+
 use Cake\Http\Middleware\CsrfProtectionMiddleware;
 use Cake\Routing\RouteBuilder;
 use Cake\Routing\Router;
@@ -102,3 +104,14 @@ Router::scope('/', function (RouteBuilder $routes) {
  * });
  * ```
  */
+
+// Nueva ruta que añadimos para nuestra acción tagged
+// The trailing `*` tells CakePHP that this action has
+// passed parameters.
+Router::scope(
+    '/bookmarks',
+    ['controller' => 'Bookmarks'],
+    function ($routes) {
+        $routes->connect('/tagged/*', ['action' => 'tags']);
+    }
+);

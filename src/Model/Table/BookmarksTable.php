@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Model\Table;
 
 use Cake\ORM\Query;
@@ -92,5 +93,64 @@ class BookmarksTable extends Table
         $rules->add($rules->existsIn(['user_id'], 'Users'));
 
         return $rules;
+    }
+
+    // El argumento $query es una instancia de query.
+    // El array $options contendrá las opciones de 'tags' que pasemos
+    // para encontrar'tagged') en nuestra acción del controlador.
+    public function findTagged(Query $query, array $options)
+    {
+        $bookmarks = $this->find()
+            ->select(['id', 'url', 'title', 'description']);
+
+        if (empty($options['tags'])) {
+            $bookmarks
+                ->leftJoinWith('Tags')
+                ->where(['Tags.title IS' => null]);
+        } else {
+            $bookmarks
+                ->innerJoinWith('Tags')
+                ->where(['Tags.title IN ' => $options['tags']]);
+        }
+
+        return $bookmarks->group(['Bookmarks.id']);
+    }
+
+    public function beforeSave($event, $entity, $options)
+    {
+        if ($entity->tag_string) {
+            $entity->tags = $this->_buildTags($entity->tag_string);
+        }
+    }
+
+    protected function _buildTags($tagString)
+    {
+        // Hace trim a las etiquetas
+        $newTags = array_map('trim', explode(',', $tagString));
+        // Elimina las etiquetas vacías
+        $newTags = array_filter($newTags);
+        // Elimina las etiquetas duplicadas
+        $newTags = array_unique($newTags);
+
+        $out = [];
+        $query = $this->Tags->find()
+            ->where(['Tags.title IN' => $newTags]);
+
+        // Elimina las etiquetas existentes de la lista de nuevas etiquetas.
+        foreach ($query->extract('title') as $existing) {
+            $index = array_search($existing, $newTags);
+            if ($index !== false) {
+                unset($newTags[$index]);
+            }
+        }
+        // Añade las etiquetas existentes.
+        foreach ($query as $tag) {
+            $out[] = $tag;
+        }
+        // Añade las etiquetas nuevas.
+        foreach ($newTags as $tag) {
+            $out[] = $this->Tags->newEntity(['title' => $tag]);
+        }
+        return $out;
     }
 }
